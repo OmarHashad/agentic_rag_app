@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from backend.api.v1.endpoints import data
+from backend.api.v1.endpoints import data, users
 
 router = APIRouter()
 router.include_router(data.router)
+router.include_router(users.router)
