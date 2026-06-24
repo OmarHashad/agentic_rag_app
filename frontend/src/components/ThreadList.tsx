@@ -33,30 +33,39 @@ function ThreadList({ token }: Props) {
 
   return (
     <div>
-      <h1>Your threads</h1>
+      <div className="threads-header">
+        <h1>Your threads</h1>
+        <p>Start a new conversation or continue an existing one</p>
+      </div>
 
-      <form onSubmit={handleCreate}>
+      <form className="create-form" onSubmit={handleCreate}>
         <input
           type="text"
-          placeholder="Thread title"
+          placeholder="New thread title..."
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <button type="submit">New thread</button>
+        <button className="btn-primary" type="submit">New thread</button>
       </form>
 
-      {loading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="error-msg">{error}</p>}
+
+      {loading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading...</p>}
 
       {!loading && threads.length === 0 && (
-        <p>No threads yet. Create one above.</p>
+        <div className="empty-state">
+          <p>No threads yet.</p>
+          <p>Create one above to get started.</p>
+        </div>
       )}
 
-      <ul>
+      <ul className="thread-list">
         {threads.map((thread) => (
-          <li key={thread.id}>
-            {thread.title ?? 'Untitled'} —{' '}
-            {new Date(thread.created_at).toLocaleDateString()}
+          <li key={thread.id} className="thread-item">
+            <span className="thread-title">{thread.title ?? 'Untitled'}</span>
+            <span className="thread-date">
+              {new Date(thread.created_at).toLocaleDateString()}
+            </span>
           </li>
         ))}
       </ul>
