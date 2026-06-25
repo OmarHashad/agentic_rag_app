@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Login from './components/Login'
 import ThreadList from './components/ThreadList'
+import DocumentList from './components/DocumentList'
 import './App.css'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
       </header>
       <main className="app-body">
         <ThreadList token={token} />
+        <DocumentList token={token} />
       </main>
     </div>
   )
