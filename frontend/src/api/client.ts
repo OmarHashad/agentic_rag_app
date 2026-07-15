@@ -40,6 +40,122 @@ export async function getThreads(token: string): Promise<Thread[]> {
   return res.json()
 }
 
+export interface Citation {
+  document_id: number | null
+  filename: string | null
+  chunk_index: number | null
+  text_snippet: string
+}
+
+export interface ChatMessage {
+  role: string
+  content: string
+  citations: Citation[]
+}
+
+export async function startChatTurn(
+  token: string,
+  threadId: number,
+  message: string
+): Promise<{ turn_id: string }> {
+  const res = await fetch(`${API_BASE}/threads/${threadId}/chat`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as { detail?: string }).detail ?? 'Chat request failed')
+  }
+  return res.json()
+}
+
+export async function getActiveTurn(
+  token: string,
+  threadId: number
+): Promise<{ turn_id: string | null }> {
+  const res = await fetch(`${API_BASE}/threads/${threadId}/active-turn`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Failed to check active turn')
+  return res.json()
+}
+
+export type ChatStreamEvent =
+  | { event_type: 'text_delta'; data: { delta: string } }
+  | { event_type: 'tool_call_started'; data: { tool_name: string } }
+  | { event_type: 'tool_call_finished'; data: { tool_name: string } }
+  | { event_type: 'turn_complete'; data: { answer: string; citations: Citation[] } }
+  | { event_type: 'turn_failed'; data: { error: string } }
+
+/**
+ * Hand-rolled SSE reader (not native EventSource — it can't send an Authorization
+ * header). Streams events via `onEvent`, tracking the last event id internally so a
+ * caller-driven reconnect can resume with Last-Event-ID instead of replaying from zero.
+ * Returns the last event id seen, for exactly that purpose.
+ */
+export async function streamTurn(
+  token: string,
+  threadId: number,
+  turnId: string,
+  onEvent: (event: ChatStreamEvent) => void,
+  options?: { lastEventId?: string; signal?: AbortSignal }
+): Promise<string | undefined> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+  if (options?.lastEventId) headers['Last-Event-ID'] = options.lastEventId
+
+  const res = await fetch(`${API_BASE}/threads/${threadId}/turns/${turnId}/stream`, {
+    headers,
+    signal: options?.signal,
+  })
+  if (!res.ok || !res.body) {
+    throw new Error(res.status === 404 ? 'Turn not found or expired' : 'Stream failed')
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let lastEventId = options?.lastEventId
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    let sepIndex
+    while ((sepIndex = buffer.indexOf('\n\n')) !== -1) {
+      const rawEvent = buffer.slice(0, sepIndex)
+      buffer = buffer.slice(sepIndex + 2)
+
+      let id: string | undefined
+      let eventType = ''
+      let data = ''
+      for (const line of rawEvent.split('\n')) {
+        if (line.startsWith('id: ')) id = line.slice(4)
+        else if (line.startsWith('event: ')) eventType = line.slice(7)
+        else if (line.startsWith('data: ')) data = line.slice(6)
+      }
+      if (id) lastEventId = id
+      if (eventType) {
+        onEvent({ event_type: eventType, data: JSON.parse(data) } as ChatStreamEvent)
+      }
+    }
+  }
+
+  return lastEventId
+}
+
+export async function getMessages(token: string, threadId: number): Promise<ChatMessage[]> {
+  const res = await fetch(`${API_BASE}/threads/${threadId}/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Failed to fetch messages')
+  return res.json()
+}
+
 export async function createThread(token: string, title: string): Promise<Thread> {
   const res = await fetch(`${API_BASE}/threads`, {
     method: 'POST',
@@ -168,5 +284,45 @@ export async function confirmUpload(token: string, documentId: number): Promise<
     const data = await res.json().catch(() => ({}))
     throw new Error((data as { detail?: string }).detail ?? 'Confirm failed')
   }
+  return res.json()
+}
+
+export async function getDocumentStatus(
+  token: string,
+  documentId: number
+): Promise<{ id: number; status: string }> {
+  const res = await fetch(`${API_BASE}/documents/${documentId}/status`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Failed to get document status')
+  return res.json()
+}
+
+export async function deleteDocument(token: string, documentId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/documents/${documentId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Failed to delete document')
+}
+
+export interface SearchResult {
+  text: string
+  filename: string
+  document_id: number
+  chunk_index: number
+  score: number
+}
+
+export async function searchDocuments(
+  token: string,
+  query: string,
+  k = 5
+): Promise<SearchResult[]> {
+  const res = await fetch(
+    `${API_BASE}/search?q=${encodeURIComponent(query)}&k=${k}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  if (!res.ok) throw new Error('Search failed')
   return res.json()
 }

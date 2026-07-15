@@ -27,6 +27,14 @@ def get_user_threads(db: Session, user_id: int) -> list[Thread]:
     return db.query(Thread).filter(Thread.user_id == user_id).order_by(Thread.created_at.desc()).all()
 
 
+def get_thread(db: Session, thread_id: int, user_id: int) -> Optional[Thread]:
+    return (
+        db.query(Thread)
+        .filter(Thread.id == thread_id, Thread.user_id == user_id)
+        .first()
+    )
+
+
 def create_document(
     db: Session,
     owner_sub: str,
@@ -64,10 +72,13 @@ def update_document_status(
     return doc
 
 
+_VISIBLE_STATUSES = ("ready", "processing", "embedded", "failed")
+
+
 def get_user_documents(db: Session, owner_sub: str) -> List[Document]:
     return (
         db.query(Document)
-        .filter(Document.owner_sub == owner_sub, Document.status == "ready")
+        .filter(Document.owner_sub == owner_sub, Document.status.in_(_VISIBLE_STATUSES))
         .order_by(Document.created_at.desc())
         .all()
     )
@@ -81,3 +92,10 @@ def get_document_by_id(
         .filter(Document.id == document_id, Document.owner_sub == owner_sub)
         .first()
     )
+
+
+def delete_document(db: Session, document_id: int, owner_sub: str) -> None:
+    db.query(Document).filter(
+        Document.id == document_id, Document.owner_sub == owner_sub
+    ).delete()
+    db.commit()

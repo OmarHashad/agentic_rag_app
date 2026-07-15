@@ -4,9 +4,11 @@ import type { Thread } from '../api/client'
 
 interface Props {
   token: string
+  selectedThreadId: number | null
+  onSelectThread: (thread: Thread) => void
 }
 
-function ThreadList({ token }: Props) {
+function ThreadList({ token, selectedThreadId, onSelectThread }: Props) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -26,6 +28,7 @@ function ThreadList({ token }: Props) {
       const thread = await createThread(token, title)
       setThreads([thread, ...threads])
       setTitle('')
+      onSelectThread(thread)
     } catch {
       setError('Failed to create thread')
     }
@@ -61,7 +64,12 @@ function ThreadList({ token }: Props) {
 
       <ul className="thread-list">
         {threads.map((thread) => (
-          <li key={thread.id} className="thread-item">
+          <li
+            key={thread.id}
+            className={`thread-item${thread.id === selectedThreadId ? ' thread-item-selected' : ''}`}
+            onClick={() => onSelectThread(thread)}
+            role="button"
+          >
             <span className="thread-title">{thread.title ?? 'Untitled'}</span>
             <span className="thread-date">
               {new Date(thread.created_at).toLocaleDateString()}

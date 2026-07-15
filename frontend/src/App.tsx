@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react'
 import Login from './components/Login'
 import ThreadList from './components/ThreadList'
 import DocumentList from './components/DocumentList'
+import SearchPanel from './components/SearchPanel'
+import ChatPanel from './components/ChatPanel'
+import type { Thread } from './api/client'
 import './App.css'
 
 function App() {
   const [token, setToken] = useState<string | null>(null)
+  const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
   const [dark, setDark] = useState(
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
   )
@@ -30,8 +34,25 @@ function App() {
         </div>
       </header>
       <main className="app-body">
-        <ThreadList token={token} />
+        <ThreadList
+          token={token}
+          selectedThreadId={selectedThread?.id ?? null}
+          onSelectThread={setSelectedThread}
+        />
+        {selectedThread ? (
+          <ChatPanel
+            key={selectedThread.id}
+            token={token}
+            threadId={selectedThread.id}
+            threadTitle={selectedThread.title}
+          />
+        ) : (
+          <div className="empty-state">
+            <p>Select or create a thread to start chatting.</p>
+          </div>
+        )}
         <DocumentList token={token} />
+        <SearchPanel token={token} />
       </main>
     </div>
   )

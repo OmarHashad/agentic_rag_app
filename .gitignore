@@ -1,7 +1,11 @@
 .env
+backend/.env
+frontend/.env
 venv/
 .DS_Store
 __pycache__/
 *.pyc
-echo ".claude/" >> .gitignore
-git rm --cached -r .claude/.claude/
+.claude/
+.pytest_cache/
+node_modules/
+frontend/dist/

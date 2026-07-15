@@ -1,3 +1,5 @@
+name: agentic-rag-app
+
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
@@ -36,7 +38,25 @@ services:
     volumes:
       - minio_data:/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.2
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
 volumes:
   keycloak_data:
   postgres_data:
   minio_data:
+  redis_data:
+  qdrant_data:

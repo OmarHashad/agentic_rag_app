@@ -1,9 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 import httpx
 from jose import jwt
 
-load_dotenv()
+load_dotenv(Path(__file__).parents[2] / ".env")
 
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")

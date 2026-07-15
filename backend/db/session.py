@@ -1,9 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-load_dotenv()
+load_dotenv(Path(__file__).parents[2] / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 

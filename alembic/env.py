@@ -1,5 +1,6 @@
 import os
 from logging.config import fileConfig
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
@@ -10,7 +11,9 @@ from alembic import context
 from backend.db.base import Base
 import backend.db.models  # noqa: F401 — registers models with Base
 
-load_dotenv("backend/.env")
+_root = Path(__file__).parent.parent
+load_dotenv(_root / ".env")           # root .env — provides DATABASE_URL
+load_dotenv(_root / "backend" / ".env")  # backend-specific overrides
 
 config = context.config
 
